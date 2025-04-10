@@ -1,51 +1,40 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const query = req.query.q as string;
 
   if (!query) {
     return res.status(400).json({ error: "Missing query param `q`" });
   }
 
-  try {
-    const serpApiKey = process.env.SERPAPI_KEY;
-    if (!serpApiKey) {
-      return res
-        .status(500)
-        .json({ error: "Missing SERPAPI_KEY in environment" });
-    }
+  const apiKey = process.env.GOOGLE_CSE_API_KEY;
+  const cx = process.env.GOOGLE_CSE_CX;
 
-    const response = await fetch(
-      `https://serpapi.com/search.json?q=site:traderjoes.com ${encodeURIComponent(
-        query
-      )}&api_key=${serpApiKey}`
-    );
+  if (!apiKey || !cx) {
+    return res.status(500).json({ error: "Missing GOOGLE_CSE_API_KEY or GOOGLE_CSE_CX in environment" });
+  }
+
+  try {
+    const apiUrl = `https://www.googleapis.com/customsearch/v1?q=site:traderjoes.com+${encodeURIComponent(
+      query
+    )}&key=${apiKey}&cx=${cx}`;
+
+    const response = await fetch(apiUrl);
 
     if (!response.ok) {
-      return res
-        .status(response.status)
-        .json({ error: "Failed to fetch from SerpApi" });
+      return res.status(response.status).json({ error: "Failed to fetch from Google CSE" });
     }
 
     const data = await response.json();
-    const firstResult = data.organic_results?.[0];
+    const firstItem = data.items?.[0];
 
-    const title = firstResult?.title || "No match found";
-    const link = firstResult?.link || null;
-    const thumbnail =
-      firstResult?.rich_snippet?.top?.detected_extensions?.image ||
-      firstResult?.thumbnail ||
-      null;
-    const price =
-      firstResult?.rich_snippet?.top?.detected_extensions?.price || "N/A";
+    const title = firstItem?.title || "No match found";
+    const link = firstItem?.link || null;
 
     res.setHeader("Access-Control-Allow-Origin", "*");
-    res.status(200).json({ title, link, thumbnail, price });
+    res.status(200).json({ title, link });
   } catch (error: any) {
-    console.error("SerpApi Error:", error);
+    console.error("CSE Error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 }

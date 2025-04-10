@@ -12,7 +12,7 @@ type SearchResult = {
 };
 
 export default function RecipeToTJs() {
-  const [url, setUrl] = useState("");
+  const [url, setUrl] = useState("https://www.allrecipes.com/recipe/223042/chicken-parmesan/");
   const [ingredients, setIngredients] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -41,7 +41,7 @@ export default function RecipeToTJs() {
       setIngredients([
         {
           ingredient: "Error fetching ingredients. Please try again.",
-          title: "",
+          title: "N/A",
           url: null,
         },
       ]);
