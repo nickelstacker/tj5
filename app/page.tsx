@@ -7,16 +7,17 @@ import { Card, CardContent } from "@/components/ui/card";
 
 type SearchResult = {
   ingredient: string;
+  quantity: string;
   title: string;
   url: string | null;
   thumbnail: string | null;
-  price: string;
+  price: string | null;
 };
-
 
 export default function RecipeToTJs() {
   const [url, setUrl] = useState("https://www.allrecipes.com/recipe/223042/chicken-parmesan/");
   const [ingredients, setIngredients] = useState<SearchResult[]>([]);
+  const [instructions, setInstructions] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const handleFetchIngredients = async () => {
@@ -31,23 +32,40 @@ export default function RecipeToTJs() {
       if (!response.ok) throw new Error("Failed to fetch recipe.");
 
       const data = await response.json();
-      const ingredientLines =
-        data.extendedIngredients?.map((item: any) => item.original) || [];
+      const ingredientData = data.extendedIngredients?.[0]; // just the first ingredient
 
-      const firstIngredient = ingredientLines[0] || "unknown ingredient";
-      const parsedIngredient = parseIngredient(firstIngredient);
+      const fullName = ingredientData?.original || "Unknown ingredient";
+      const quantityUnit = `${ingredientData?.amount || ""} ${ingredientData?.unit || ""}`.trim();
+
+      const parsedIngredient = parseIngredient(fullName);
 
       const result = await matchToTraderJoesItem(parsedIngredient.name);
-      setIngredients([result]);
+      setIngredients([
+        {
+          ingredient: toTitleCase(parsedIngredient.name),
+          quantity: quantityUnit,
+          title: result.title,
+          url: result.url,
+          thumbnail: result.thumbnail,
+          price: result.price,
+        },
+      ]);
+
+      const rawInstructions = data.instructions || data.summary || null;
+      setInstructions(rawInstructions?.replace(/<[^>]+>/g, "") || null);
     } catch (err) {
       console.error("Error fetching ingredients:", err);
       setIngredients([
         {
-          ingredient: "Error fetching ingredients. Please try again.",
+          ingredient: "Error fetching ingredients",
+          quantity: "",
           title: "N/A",
           url: null,
+          thumbnail: null,
+          price: null,
         },
       ]);
+      setInstructions(null);
     } finally {
       setLoading(false);
     }
@@ -72,7 +90,7 @@ export default function RecipeToTJs() {
 
   const matchToTraderJoesItem = async (
     ingredient: string
-  ): Promise<SearchResult> => {
+  ): Promise<Omit<SearchResult, "ingredient" | "quantity">> => {
     try {
       const response = await fetch(
         `/api/serp-search?q=${encodeURIComponent(ingredient)}`
@@ -80,24 +98,21 @@ export default function RecipeToTJs() {
       const data = await response.json();
 
       return {
-        ingredient: toTitleCase(ingredient),
         title: data.title || "No match found",
         url: data.link || null,
         thumbnail: data.thumbnail || null,
-        price: data.price || "N/A",
+        price: data.price || null,
       };
     } catch (err) {
       console.error("Error searching Trader Joe's for:", ingredient, err);
       return {
-        ingredient: toTitleCase(ingredient),
         title: "Error finding product",
         url: null,
         thumbnail: null,
-        price: "N/A",
+        price: null,
       };
     }
   };
-
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
@@ -128,7 +143,11 @@ export default function RecipeToTJs() {
               <thead>
                 <tr className="bg-gray-100">
                   <th className="p-3 border border-gray-300 text-left">Recipe Ingredient</th>
+                  <th className="p-3 border border-gray-300 text-left">Quantity</th>
                   <th className="p-3 border border-gray-300 text-left">Trader Joe's Match</th>
+                  {ingredients.some(item => item.price) && (
+                    <th className="p-3 border border-gray-300 text-left">Price</th>
+                  )}
                   <th className="p-3 border border-gray-300 text-left">Image</th>
                 </tr>
               </thead>
@@ -136,6 +155,7 @@ export default function RecipeToTJs() {
                 {ingredients.map((item, idx) => (
                   <tr key={idx} className="border-t border-gray-300">
                     <td className="p-3 border border-gray-300">{item.ingredient}</td>
+                    <td className="p-3 border border-gray-300">{item.quantity}</td>
                     <td className="p-3 border border-gray-300 whitespace-normal break-words">
                       {item.url ? (
                         <a
@@ -150,6 +170,9 @@ export default function RecipeToTJs() {
                         <span className="text-gray-500 italic">{item.title}</span>
                       )}
                     </td>
+                    {ingredients.some(i => i.price) && (
+                      <td className="p-3 border border-gray-300">{item.price || "N/A"}</td>
+                    )}
                     <td className="p-3 border border-gray-300">
                       {item.thumbnail ? (
                         <img
@@ -161,13 +184,19 @@ export default function RecipeToTJs() {
                         <span className="text-gray-500 italic">No image</span>
                       )}
                     </td>
-
                   </tr>
                 ))}
               </tbody>
             </table>
           </CardContent>
         </Card>
+      )}
+
+      {instructions && (
+        <div className="mt-8">
+          <h2 className="text-xl font-semibold mb-2">Instructions</h2>
+          <p className="whitespace-pre-wrap leading-relaxed">{instructions}</p>
+        </div>
       )}
     </div>
   );
