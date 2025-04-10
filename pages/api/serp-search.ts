@@ -30,9 +30,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const title = firstItem?.title || "No match found";
     const link = firstItem?.link || null;
+    const thumbnail = firstItem?.pagemap?.cse_image?.[0]?.src || null;
+    const price = firstItem?.snippet?.match(/\$\d+(\.\d{2})?/)?.[0] || "N/A";
 
     res.setHeader("Access-Control-Allow-Origin", "*");
-    res.status(200).json({ title, link });
+    res.status(200).json({ title, link, thumbnail, price });
+
   } catch (error: any) {
     console.error("CSE Error:", error);
     res.status(500).json({ error: "Internal server error" });

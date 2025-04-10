@@ -9,7 +9,10 @@ type SearchResult = {
   ingredient: string;
   title: string;
   url: string | null;
+  thumbnail: string | null;
+  price: string;
 };
+
 
 export default function RecipeToTJs() {
   const [url, setUrl] = useState("https://www.allrecipes.com/recipe/223042/chicken-parmesan/");
@@ -80,6 +83,8 @@ export default function RecipeToTJs() {
         ingredient: toTitleCase(ingredient),
         title: data.title || "No match found",
         url: data.link || null,
+        thumbnail: data.thumbnail || null,
+        price: data.price || "N/A",
       };
     } catch (err) {
       console.error("Error searching Trader Joe's for:", ingredient, err);
@@ -87,9 +92,12 @@ export default function RecipeToTJs() {
         ingredient: toTitleCase(ingredient),
         title: "Error finding product",
         url: null,
+        thumbnail: null,
+        price: "N/A",
       };
     }
   };
+
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
@@ -121,13 +129,14 @@ export default function RecipeToTJs() {
                 <tr className="bg-gray-100">
                   <th className="p-3 border border-gray-300 text-left">Recipe Ingredient</th>
                   <th className="p-3 border border-gray-300 text-left">Trader Joe's Match</th>
+                  <th className="p-3 border border-gray-300 text-left">Image</th>
                 </tr>
               </thead>
               <tbody>
                 {ingredients.map((item, idx) => (
                   <tr key={idx} className="border-t border-gray-300">
                     <td className="p-3 border border-gray-300">{item.ingredient}</td>
-                    <td className="p-3 border border-gray-300">
+                    <td className="p-3 border border-gray-300 whitespace-normal break-words">
                       {item.url ? (
                         <a
                           href={item.url}
@@ -141,6 +150,18 @@ export default function RecipeToTJs() {
                         <span className="text-gray-500 italic">{item.title}</span>
                       )}
                     </td>
+                    <td className="p-3 border border-gray-300">
+                      {item.thumbnail ? (
+                        <img
+                          src={item.thumbnail}
+                          alt={item.title}
+                          className="w-40 h-40 object-cover rounded"
+                        />
+                      ) : (
+                        <span className="text-gray-500 italic">No image</span>
+                      )}
+                    </td>
+
                   </tr>
                 ))}
               </tbody>
