@@ -37,6 +37,8 @@ export default function RecipeToTJs() {
     "vanilla extract",
     "baking soda",
     "cooking spray",
+    "honey",
+    "water"
   ];
 
   const parseForMatching = (
@@ -68,25 +70,15 @@ export default function RecipeToTJs() {
   const matchToTraderJoesItem = async (
     ingredient: string
   ): Promise<Omit<SearchResult, "ingredient" | "quantity">> => {
-    try {
-      const response = await fetch(`/api/serp-search?q=${encodeURIComponent(ingredient)}`);
-      const data = await response.json();
+    const response = await fetch(`/api/serp-search?q=${encodeURIComponent(ingredient)}`);
+    const data = await response.json();
 
-      return {
-        title: data.title || "No match found",
-        url: data.link || null,
-        thumbnail: data.thumbnail || null,
-        price: data.price || null,
-      };
-    } catch (err) {
-      console.error("Error searching Trader Joe's for:", ingredient, err);
-      return {
-        title: "Error finding product",
-        url: null,
-        thumbnail: null,
-        price: null,
-      };
-    }
+    return {
+      title: data.title || "No match found",
+      url: data.link || null,
+      thumbnail: data.thumbnail || null,
+      price: data.price || null,
+    };
   };
 
   const handleFetchIngredients = async () => {
@@ -123,16 +115,27 @@ export default function RecipeToTJs() {
           continue;
         }
 
-        const match = await matchToTraderJoesItem(parsed.name);
-
-        matchedIngredients.push({
-          ingredient: toTitleCase(parsed.name),
-          quantity: quantityUnit,
-          title: match.title,
-          url: match.url,
-          thumbnail: match.thumbnail,
-          price: match.price,
-        });
+        try {
+          const match = await matchToTraderJoesItem(parsed.name);
+          matchedIngredients.push({
+            ingredient: toTitleCase(parsed.name),
+            quantity: quantityUnit,
+            title: match.title,
+            url: match.url,
+            thumbnail: match.thumbnail,
+            price: match.price,
+          });
+        } catch (error) {
+          console.error("Failed to match Trader Joe’s item for:", parsed.name, error);
+          matchedIngredients.push({
+            ingredient: toTitleCase(parsed.name),
+            quantity: quantityUnit,
+            title: "Error finding product",
+            url: null,
+            thumbnail: null,
+            price: null,
+          });
+        }
       }
 
       setIngredients(matchedIngredients);
