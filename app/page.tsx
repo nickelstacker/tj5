@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import nlp from 'compromise';
 
 type SearchResult = {
   ingredient: string;
@@ -48,10 +49,17 @@ export default function RecipeToTJs() {
       /^\s*([\d¼½¾.\-\/\s]+)?\s*(cups?|tablespoons?|tbsp|teaspoons?|tsp|pounds?|lbs?|oz|ounces?|grams?|g|ml|liters?|l)?\s+(.*)$/i;
 
     const match = input.match(regex);
+    const rawName = match?.[3]?.trim() || input.trim();
+
+    const cleaned = rawName.toLowerCase().replace(/,.*$/, "").replace(/\(.*?\)/g, "");
+    const doc = nlp(cleaned);
+    const nouns = doc.nouns().toSingular().out("array");
+    const finalName = nouns.join(" ").trim() || rawName;
+
     return {
       quantity: match?.[1]?.trim() || "",
       unit: match?.[2]?.trim() || "",
-      name: match?.[3]?.trim() || input.trim(),
+      name: finalName,
     };
   };
 
