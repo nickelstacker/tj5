@@ -39,7 +39,10 @@ export default function RecipeToTJs() {
     "baking soda",
     "cooking spray",
     "honey",
-    "water"
+    "water",
+    "basil",
+    "oregano",
+    "red pepper"
   ];
 
   const parseForMatching = (
@@ -118,10 +121,11 @@ export default function RecipeToTJs() {
           parsedStapleName.includes(staple)
         );
 
-        if (isStaple) {
+        if (isStaple && !stapleIngredients.includes(toTitleCase(parsed.name))) {
           stapleIngredients.push(toTitleCase(parsed.name));
           continue;
         }
+
 
         try {
           const match = await matchToTraderJoesItem(parsed.name);
