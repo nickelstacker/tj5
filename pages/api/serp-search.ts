@@ -5,14 +5,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const apiKey = process.env.GOOGLE_CSE_API_KEY;
   const cx = process.env.GOOGLE_CSE_CX;
+  // Ensure environment variables are set
+  if (!apiKey || !cx) {
+    console.error("Missing GOOGLE_CSE_API_KEY or GOOGLE_CSE_CX environment variables");
+    return res
+      .status(500)
+      .json({ error: "Missing Google CSE API key or CSE ID" });
+  }
 
+  // Construct Google Custom Search API URL
   const apiUrl = `https://www.googleapis.com/customsearch/v1?q=site:traderjoes.com+${encodeURIComponent(
     query
   )}&key=${apiKey}&cx=${cx}`;
+  console.log("Google CSE request URL:", apiUrl);
 
   try {
     const response = await fetch(apiUrl);
     const data = await response.json();
+    // Handle API-level errors
+    if (data.error) {
+      console.error("Google CSE API error:", data.error);
+      return res
+        .status(data.error.code || 500)
+        .json({ error: data.error.message });
+    }
 
     const firstItem = data.items?.[0];
 
