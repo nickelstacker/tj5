@@ -14,11 +14,12 @@ type SearchResult = {
   thumbnail: string | null;
   price: string | null;
 };
-
+// staple ingredient type with optional quantity
+type Staple = { name: string; quantity: string };
 export default function RecipeToTJs() {
   const [url, setUrl] = useState("https://www.allrecipes.com/recipe/223042/chicken-parmesan/");
   const [ingredients, setIngredients] = useState<SearchResult[]>([]);
-  const [staples, setStaples] = useState<string[]>([]);
+  const [staples, setStaples] = useState<Staple[]>([]);
   // Instructions may come back as a string or an array of steps
   const [instructions, setInstructions] = useState<string | string[] | null>(null);
   const [recipeImage, setRecipeImage] = useState<string | null>(null);
@@ -113,7 +114,8 @@ export default function RecipeToTJs() {
 
       const rawIngredients: any[] = data.extendedIngredients || [];
       const matchedIngredients: SearchResult[] = [];
-      const stapleIngredients: string[] = [];
+      // Collect staple ingredients with their quantities
+      const stapleIngredients: Staple[] = [];
 
       for (const ing of rawIngredients) {
         const fullName = ing.original || "Unknown ingredient";
@@ -130,8 +132,12 @@ export default function RecipeToTJs() {
           );
         });
 
-        if (isStaple && !stapleIngredients.includes(toTitleCase(parsed.name))) {
-          stapleIngredients.push(toTitleCase(parsed.name));
+        if (isStaple) {
+          const titleName = toTitleCase(parsed.name);
+          // avoid duplicates by name
+          if (!stapleIngredients.some((s) => s.name === titleName)) {
+            stapleIngredients.push({ name: titleName, quantity: quantityUnit });
+          }
           continue;
         }
 
@@ -164,16 +170,17 @@ export default function RecipeToTJs() {
       const cleanInstructions = rawInstructions.replace(/<[^>]+>/g, "");
       let simplifiedIngredients = matchedIngredients;
       let simplifiedInstructions = cleanInstructions;
-      try {
-        const simplifyResponse = await fetch("/api/simplify-recipe", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            ingredients: matchedIngredients.map((ing) => ({ name: ing.ingredient, quantity: ing.quantity })),
-            staples: stapleIngredients,
-            instructions: cleanInstructions,
-          }),
-        });
+        try {
+          // Simplify recipe via API; send staple names only
+          const simplifyResponse = await fetch("/api/simplify-recipe", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              ingredients: matchedIngredients.map((ing) => ({ name: ing.ingredient, quantity: ing.quantity })),
+              staples: stapleIngredients.map((s) => s.name),
+              instructions: cleanInstructions,
+            }),
+          });
         if (simplifyResponse.ok) {
           const result = await simplifyResponse.json();
           simplifiedInstructions = result.instructions;
@@ -304,7 +311,10 @@ export default function RecipeToTJs() {
           <p className="mb-2 font-medium">You probably already have:</p>
           <ul className="list-disc list-inside space-y-1">
             {staples.map((item, idx) => (
-              <li key={idx}>{item}</li>
+              <li key={idx}>
+                {item.name}
+                {item.quantity && ` - ${item.quantity}`}
+              </li>
             ))}
           </ul>
         </div>
