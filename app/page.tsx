@@ -19,7 +19,8 @@ export default function RecipeToTJs() {
   const [url, setUrl] = useState("https://www.allrecipes.com/recipe/223042/chicken-parmesan/");
   const [ingredients, setIngredients] = useState<SearchResult[]>([]);
   const [staples, setStaples] = useState<string[]>([]);
-  const [instructions, setInstructions] = useState<string | null>(null);
+  // Instructions may come back as a string or an array of steps
+  const [instructions, setInstructions] = useState<string | string[] | null>(null);
   const [recipeImage, setRecipeImage] = useState<string | null>(null);
   const [recipeTitle, setRecipeTitle] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -34,6 +35,8 @@ export default function RecipeToTJs() {
     "canola oil",
     "sugar",
     "milk",
+    "egg",
+    // staple: all-purpose flour
     "all-purpose flour",
     "vanilla extract",
     "baking soda",
@@ -69,7 +72,8 @@ export default function RecipeToTJs() {
   const parseForStapleDetection = (input: string): string => {
     return input
       .toLowerCase()
-      .replace(/[^a-z\s]/g, "") // remove punctuation
+      .replace(/-/g, " ") // normalize hyphens to spaces
+      .replace(/[^a-z\s]/g, "") // remove other punctuation
       .replace(/\b(of|into|small|large|fresh|cut|shredded|cubed|diced|and|or|a|an|the)\b/g, "")
       .replace(/\s+/g, " ")
       .trim();
@@ -117,9 +121,14 @@ export default function RecipeToTJs() {
         const parsedStapleName = parseForStapleDetection(parsed.name);
         const quantityUnit = `${parsed.quantity} ${parsed.unit}`.trim();
 
-        const isStaple = STAPLE_INGREDIENTS.some((staple) =>
-          parsedStapleName.includes(staple)
-        );
+        // Determine if the parsed ingredient matches any staple (allow partial matches)
+        const isStaple = STAPLE_INGREDIENTS.some((staple) => {
+          const normStaple = parseForStapleDetection(staple);
+          return (
+            parsedStapleName.includes(normStaple) ||
+            normStaple.includes(parsedStapleName)
+          );
+        });
 
         if (isStaple && !stapleIngredients.includes(toTitleCase(parsed.name))) {
           stapleIngredients.push(toTitleCase(parsed.name));
@@ -150,11 +159,40 @@ export default function RecipeToTJs() {
         }
       }
 
-      setIngredients(matchedIngredients);
+      // Simplify the recipe: select top 5 ingredients and rewrite instructions via OpenAI
+      const rawInstructions = data.instructions || data.summary || "";
+      const cleanInstructions = rawInstructions.replace(/<[^>]+>/g, "");
+      let simplifiedIngredients = matchedIngredients;
+      let simplifiedInstructions = cleanInstructions;
+      try {
+        const simplifyResponse = await fetch("/api/simplify-recipe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ingredients: matchedIngredients.map((ing) => ({ name: ing.ingredient, quantity: ing.quantity })),
+            staples: stapleIngredients,
+            instructions: cleanInstructions,
+          }),
+        });
+        if (simplifyResponse.ok) {
+          const result = await simplifyResponse.json();
+          simplifiedInstructions = result.instructions;
+          // Map simplified names back to matched ingredients with details
+          simplifiedIngredients = result.ingredients.map((ing: { name: string; quantity: string }) => {
+            const found = matchedIngredients.find((m) => m.ingredient === ing.name);
+            return found
+              ? { ...found, quantity: ing.quantity }
+              : { ingredient: ing.name, quantity: ing.quantity, title: "", url: null, thumbnail: null, price: null };
+          });
+        } else {
+          console.error("Simplify API error:", simplifyResponse.statusText);
+        }
+      } catch (e) {
+        console.error("Error simplifying recipe:", e);
+      }
+      setIngredients(simplifiedIngredients);
       setStaples(stapleIngredients);
-
-      const rawInstructions = data.instructions || data.summary || null;
-      setInstructions(rawInstructions?.replace(/<[^>]+>/g, "") || null);
+      setInstructions(simplifiedInstructions);
     } catch (err) {
       console.error("Error fetching ingredients:", err);
       setIngredients([]);
@@ -275,7 +313,18 @@ export default function RecipeToTJs() {
       {instructions && (
         <div className="mt-8">
           <h2 className="text-xl font-semibold mb-2">Instructions</h2>
-          <p className="whitespace-pre-wrap leading-relaxed">{instructions}</p>
+          
+          {Array.isArray(instructions) ? (
+            <ol className="list-decimal list-inside space-y-2">
+              {instructions.map((step, idx) => (
+                <li key={idx} className="whitespace-pre-wrap leading-relaxed">
+                  {step}
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <p className="whitespace-pre-wrap leading-relaxed">{instructions}</p>
+          )}
         </div>
       )}
     </div>
