@@ -1,6 +1,13 @@
 "use client";
 
 import React, { useState } from "react";
+// Simple loading spinner SVG
+const Spinner = () => (
+  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+  </svg>
+);
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -261,8 +268,11 @@ export default function RecipeToTJs() {
           value={url}
           onChange={(e) => setUrl(e.target.value)}
         />
-        <Button type="submit" disabled={loading}>
-          {loading ? "Loading..." : "Convert"}
+        <Button type="submit" disabled={loading} className="flex items-center justify-center">
+          {loading && <Spinner />}
+          <span className={loading ? "ml-2" : ""}>
+            {loading ? "Loading" : "Convert"}
+          </span>
         </Button>
       </form>
 
@@ -282,27 +292,45 @@ export default function RecipeToTJs() {
         </div>
       )}
 
+      {/* Instructions above the ingredient table */}
+      {instructions && (
+        <Card className="mb-8">
+          <CardContent className="p-6">
+            <h2 className="text-xl font-semibold mb-4">Instructions</h2>
+            {Array.isArray(instructions) ? (
+              <ol className="list-decimal list-inside space-y-2 leading-relaxed">
+                {instructions.map((step, idx) => (
+                  <li key={idx}>{step}</li>
+                ))}
+              </ol>
+            ) : (
+              <p className="leading-relaxed">{instructions}</p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+      {/* Ingredient table, with reduced padding (p-2) */}
       {ingredients.length > 0 && (
         <Card>
-          <CardContent className="p-6 overflow-auto">
+          <CardContent className="p-4 overflow-auto">
             <table className="min-w-full table-auto border-collapse border border-gray-300">
               <thead>
-                <tr className="bg-gray-100">
-                  <th className="p-3 border border-gray-300 text-left">Recipe Ingredient</th>
-                  <th className="p-3 border border-gray-300 text-left">Quantity</th>
-                  <th className="p-3 border border-gray-300 text-left">Trader Joe's Match</th>
+                <tr>
+                  <th className="p-2 border border-gray-300 text-left sticky top-0 bg-gray-100 z-10">Recipe Ingredient</th>
+                  <th className="p-2 border border-gray-300 text-left sticky top-0 bg-gray-100 z-10">Quantity</th>
+                  <th className="p-2 border border-gray-300 text-left sticky top-0 bg-gray-100 z-10">Trader Joe's Match</th>
                   {ingredients.some((item) => item.price) && (
-                    <th className="p-3 border border-gray-300 text-left">Price</th>
+                    <th className="p-2 border border-gray-300 text-left sticky top-0 bg-gray-100 z-10">Price</th>
                   )}
-                  <th className="p-3 border border-gray-300 text-left">Image</th>
+                  <th className="p-2 border border-gray-300 text-left sticky top-0 bg-gray-100 z-10">Image</th>
                 </tr>
               </thead>
               <tbody>
                 {ingredients.map((item, idx) => (
-                  <tr key={idx} className="border-t border-gray-300">
-                    <td className="p-3 border border-gray-300">{item.ingredient}</td>
-                    <td className="p-3 border border-gray-300">{item.quantity}</td>
-                    <td className="p-3 border border-gray-300 whitespace-normal break-words">
+                  <tr key={idx} className="border-t border-gray-300 even:bg-gray-50">
+                    <td className="p-2 border border-gray-300">{item.ingredient}</td>
+                    <td className="p-2 border border-gray-300">{item.quantity}</td>
+                    <td className="p-2 border border-gray-300 whitespace-normal break-words">
                       {item.url ? (
                         <a
                           href={item.url}
@@ -326,26 +354,17 @@ export default function RecipeToTJs() {
                       )}
                     </td>
                     {ingredients.some((i) => i.price) && (
-                      <td className="p-3 border border-gray-300">{item.price || "N/A"}</td>
+                      <td className="p-2 border border-gray-300">{item.price || "N/A"}</td>
                     )}
-                    <td className="p-3 border border-gray-300">
+                    <td className="p-2 border border-gray-300">
                       {item.thumbnail ? (
                         <img
                           src={item.thumbnail}
                           alt={item.title}
-                          className="w-40 h-40 object-cover rounded"
+                          className="w-24 h-24 object-cover rounded"
                         />
                       ) : (
-                        <>
-                          <span className="text-gray-500 italic">No image</span>
-                          {item.debugQuery && item.debugRaw && (
-                            <div className="mt-1 text-xs text-gray-500">
-                              <p className="font-medium">Debug:</p>
-                              <p>Query: <code>{item.debugQuery}</code></p>
-                              <pre className="whitespace-pre-wrap">{JSON.stringify(item.debugRaw, null, 2)}</pre>
-                            </div>
-                          )}
-                        </>
+                        <span className="text-gray-500 italic">No image</span>
                       )}
                     </td>
                   </tr>
@@ -358,7 +377,7 @@ export default function RecipeToTJs() {
 
       {staples.length > 0 && (
         <div className="mt-4 text-gray-700">
-          <p className="mb-2 font-medium">You probably already have:</p>
+          <p className="mb-2 font-medium">Already in your kitchen:</p>
           <ul className="list-disc list-inside space-y-1">
             {staples.map((item, idx) => (
               <li key={idx}>
@@ -367,24 +386,6 @@ export default function RecipeToTJs() {
               </li>
             ))}
           </ul>
-        </div>
-      )}
-
-      {instructions && (
-        <div className="mt-8">
-          <h2 className="text-xl font-semibold mb-2">Instructions</h2>
-          
-          {Array.isArray(instructions) ? (
-            <ol className="list-decimal list-inside space-y-2">
-              {instructions.map((step, idx) => (
-                <li key={idx} className="whitespace-pre-wrap leading-relaxed">
-                  {step}
-                </li>
-              ))}
-            </ol>
-          ) : (
-            <p className="whitespace-pre-wrap leading-relaxed">{instructions}</p>
-          )}
         </div>
       )}
     </div>

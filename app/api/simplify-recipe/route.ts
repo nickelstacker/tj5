@@ -33,12 +33,19 @@ export async function POST(request: Request) {
       temperature: 0.7,
     });
 
-    const content = completion.choices[0].message?.content || '';
+    // Extract and clean the assistant's reply, stripping any markdown fences
+    const raw = completion.choices[0].message?.content || '';
+    let content = raw.trim();
+    // Remove triple-backtick fences (```json or ```)
+    if (content.startsWith('```')) {
+      content = content.replace(/^```(?:json)?\s*/, '').replace(/```\s*$/, '').trim();
+    }
+    // Attempt to parse JSON
     try {
       const json = JSON.parse(content);
       return NextResponse.json(json);
     } catch (e) {
-      // Fallback if JSON parsing fails
+      // Fallback if JSON parsing fails: return top 5 ingredients and raw text instructions
       const fallback = {
         ingredients: ingredients.slice(0, 5),
         instructions: content,
