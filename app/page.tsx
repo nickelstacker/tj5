@@ -6,6 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import nlp from 'compromise';
 
+/**
+ * Represents a matched ingredient from Trader Joe's search,
+ * including debug information when needed.
+ */
 type SearchResult = {
   ingredient: string;
   quantity: string;
@@ -13,6 +17,10 @@ type SearchResult = {
   url: string | null;
   thumbnail: string | null;
   price: string | null;
+  /** The search query sent to the SERP API */
+  debugQuery?: string;
+  /** Raw response data from the SERP API */
+  debugRaw?: any;
 };
 // staple ingredient type with optional quantity
 type Staple = { name: string; quantity: string };
@@ -88,12 +96,14 @@ export default function RecipeToTJs() {
   ): Promise<Omit<SearchResult, "ingredient" | "quantity">> => {
     const response = await fetch(`/api/serp-search?q=${encodeURIComponent(ingredient)}`);
     const data = await response.json();
-
+    // Return match with debug info
     return {
       title: data.title || "No match found",
       url: data.link || null,
       thumbnail: data.thumbnail || null,
       price: data.price || null,
+      debugQuery: ingredient,
+      debugRaw: data,
     };
   };
 
@@ -161,6 +171,8 @@ export default function RecipeToTJs() {
             url: null,
             thumbnail: null,
             price: null,
+            debugQuery: parsed.name,
+            debugRaw: { error: String(error) },
           });
         }
       }
@@ -281,7 +293,16 @@ export default function RecipeToTJs() {
                           {item.title}
                         </a>
                       ) : (
-                        <span className="text-gray-500 italic">{item.title}</span>
+                        <>
+                          <span className="text-gray-500 italic">{item.title}</span>
+                          {item.debugQuery && item.debugRaw && (
+                            <div className="mt-1 text-xs text-gray-500">
+                              <p className="font-medium">Debug:</p>
+                              <p>Query: <code>{item.debugQuery}</code></p>
+                              <pre className="whitespace-pre-wrap">{JSON.stringify(item.debugRaw, null, 2)}</pre>
+                            </div>
+                          )}
+                        </>
                       )}
                     </td>
                     {ingredients.some((i) => i.price) && (
@@ -295,7 +316,16 @@ export default function RecipeToTJs() {
                           className="w-40 h-40 object-cover rounded"
                         />
                       ) : (
-                        <span className="text-gray-500 italic">No image</span>
+                        <>
+                          <span className="text-gray-500 italic">No image</span>
+                          {item.debugQuery && item.debugRaw && (
+                            <div className="mt-1 text-xs text-gray-500">
+                              <p className="font-medium">Debug:</p>
+                              <p>Query: <code>{item.debugQuery}</code></p>
+                              <pre className="whitespace-pre-wrap">{JSON.stringify(item.debugRaw, null, 2)}</pre>
+                            </div>
+                          )}
+                        </>
                       )}
                     </td>
                   </tr>
