@@ -40,6 +40,9 @@ export default function RecipeToTJs() {
   const [recipeImage, setRecipeImage] = useState<string | null>(null);
   const [recipeTitle, setRecipeTitle] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  // Ingredients to suggest adding beyond the top picks
+  type SimpleIngredient = { name: string; quantity: string };
+  const [additionalIngredients, setAdditionalIngredients] = useState<SimpleIngredient[]>([]);
 
   const STAPLE_INGREDIENTS = [
     "salt",
@@ -61,7 +64,7 @@ export default function RecipeToTJs() {
     "water",
     "basil",
     "oregano",
-    "red pepper"
+    "red pepper",
   ];
 
   const parseForMatching = (
@@ -230,6 +233,8 @@ export default function RecipeToTJs() {
               ? { ...found, quantity: ing.quantity }
               : { ingredient: ing.name, quantity: ing.quantity, title: "", url: null, thumbnail: null, price: null };
           });
+          // Use API-provided discarded list for additional suggestions
+          setAdditionalIngredients(result.discardedIngredients || []);
         } else {
           console.error("Simplify API error:", simplifyResponse.statusText);
         }
@@ -244,6 +249,7 @@ export default function RecipeToTJs() {
       setIngredients([]);
       setStaples([]);
       setInstructions(null);
+      setAdditionalIngredients([]);
       setRecipeImage(null);
       setRecipeTitle(null);
     } finally {
@@ -384,6 +390,16 @@ export default function RecipeToTJs() {
                 {item.name}
                 {item.quantity && ` - ${item.quantity}`}
               </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {additionalIngredients.length > 0 && (
+        <div className="mt-4 text-gray-700">
+          <p className="mb-2 font-medium">Could also try adding:</p>
+          <ul className="list-disc list-inside space-y-1">
+            {additionalIngredients.map((item, idx) => (
+              <li key={idx}>{item.name}</li>
             ))}
           </ul>
         </div>

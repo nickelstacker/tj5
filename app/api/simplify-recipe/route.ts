@@ -23,7 +23,11 @@ export async function POST(request: Request) {
             .join('\n')}\n` +
           `Staples:\n${staples.map((s: string) => `- ${s}`).join('\n')}\n` +
           `Instructions:\n${instructions}\n` +
-          `\nRespond with a JSON object with two fields: \"ingredients\", an array of objects with \"name\" and \"quantity\" for the top 5 ingredients; and \"instructions\", the rewritten instructions. No additional text.`,
+          `\nRespond with a JSON object containing these three fields exactly:\n` +
+          `1. \"ingredients\": an array of objects with \"name\" and \"quantity\" for the top 5 ingredients you selected.\n` +
+          `2. \"discardedIngredients\": an array of objects with \"name\" and \"quantity\" for the remaining non-staple ingredients you did not choose.\n` +
+          `3. \"instructions\": the rewritten instructions using only the chosen ingredients and staples.\n` +
+          `No additional text or fields.`,
       },
     ] as ChatCompletionMessageParam[];
 
@@ -45,9 +49,10 @@ export async function POST(request: Request) {
       const json = JSON.parse(content);
       return NextResponse.json(json);
     } catch (e) {
-      // Fallback if JSON parsing fails: return top 5 ingredients and raw text instructions
+      // Fallback if JSON parsing fails: split into kept and discarded lists
       const fallback = {
         ingredients: ingredients.slice(0, 5),
+        discardedIngredients: ingredients.slice(5),
         instructions: content,
       };
       return NextResponse.json(fallback);
