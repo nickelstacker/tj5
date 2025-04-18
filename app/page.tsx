@@ -68,6 +68,8 @@ export default function RecipeToTJs() {
 
     const cleaned = rawName.toLowerCase().replace(/,.*$/, "").replace(/\(.*?\)/g, "");
     const doc = nlp(cleaned);
+    // Remove adjectives like "fresh" or "prepared" to focus on core noun(s)
+    doc.match('#Adjective').delete();
     const nouns = doc.nouns().toSingular().out("array");
     const finalName = nouns.join(" ").trim() || rawName;
 
@@ -195,7 +197,25 @@ export default function RecipeToTJs() {
           });
         if (simplifyResponse.ok) {
           const result = await simplifyResponse.json();
-          simplifiedInstructions = result.instructions;
+          // Normalize instructions to an array of steps for nicer display
+          let instr: any = result.instructions;
+          if (typeof instr === 'string') {
+            // Attempt to parse JSON string if it's an array literal
+            try {
+              const parsed = JSON.parse(instr);
+              if (Array.isArray(parsed)) {
+                instr = parsed;
+              }
+            } catch {}
+            // Split by newlines into steps if still a string
+            if (typeof instr === 'string') {
+              instr = instr
+                .split(/\r?\n/)
+                .map((line) => line.trim())
+                .filter((line) => line.length > 0);
+            }
+          }
+          simplifiedInstructions = instr;
           // Map simplified names back to matched ingredients with details
           simplifiedIngredients = result.ingredients.map((ing: { name: string; quantity: string }) => {
             const found = matchedIngredients.find((m) => m.ingredient === ing.name);
