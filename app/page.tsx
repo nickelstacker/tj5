@@ -83,10 +83,27 @@ export default function RecipeToTJs() {
     const nouns = doc.nouns().toSingular().out("array");
     const finalName = nouns.join(" ").trim() || rawName;
 
+    // Remove any leftover quantity or unit tokens at the start of the name
+    const unitKeywords = new Set([
+      "cup", "cups", "tablespoon", "tablespoons", "tbsp", "teaspoon", "teaspoons",
+      "tsp", "pound", "pounds", "lb", "lbs", "ounce", "ounces", "oz",
+      "gram", "grams", "g", "ml", "liter", "liters", "l"
+    ]);
+    const parts = finalName.split(/\s+/);
+    while (parts.length > 0) {
+      const token = parts[0].toLowerCase().replace(/\.+$/, "");
+      if (/^[\d\/¼½¾\.\-]+$/.test(parts[0]) || unitKeywords.has(token)) {
+        parts.shift();
+      } else {
+        break;
+      }
+    }
+    const cleanedName = parts.join(" ") || finalName;
+
     return {
       quantity: match?.[1]?.trim() || "",
       unit: match?.[2]?.trim() || "",
-      name: finalName,
+      name: cleanedName,
     };
   };
 

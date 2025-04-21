@@ -26,9 +26,9 @@ export async function POST(request: Request) {
           `Staples:\n${staples.map((s: string) => `- ${s}`).join('\n')}\n` +
           `Instructions:\n${instructions}\n` +
           `\nRespond with a JSON object containing these three fields exactly:\n` +
-          `1. \"ingredients\": an array of objects with \"name\" and \"quantity\" for the top 5 ingredients you selected.\n` +
+          `1. \"ingredients\": an array of objects with \"name\" and \"quantity\" for the top 5 ingredients you selected. As a reminder, \n` +
           `2. \"discardedIngredients\": an array of objects with \"name\" and \"quantity\" for the remaining non-staple ingredients you did not choose.\n` +
-          `3. \"instructions\": the rewritten instructions using only the chosen ingredients and staples.\n` +
+          `3. \"instructions\": the rewritten instructions using only the chosen ingredients and staples. Prioritize foods that will make up the majority of the calories of the meal, like meats and grains. Don't prioritize small spices or sauces or herbs as high.\n` +
           `No additional text or fields.`,
       },
     ];
