@@ -79,7 +79,7 @@ export default function RecipeToTJs() {
     const cleaned = rawName.toLowerCase().replace(/,.*$/, "").replace(/\(.*?\)/g, "");
     const doc = nlp(cleaned);
     // Remove adjectives like "fresh" or "prepared" to focus on core noun(s)
-    doc.match('#Adjective').delete();
+    doc.delete('#Adjective');
     const nouns = doc.nouns().toSingular().out("array");
     const finalName = nouns.join(" ").trim() || rawName;
 

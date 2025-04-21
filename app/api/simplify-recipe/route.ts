@@ -1,5 +1,7 @@
+export const runtime = 'nodejs';
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions/completions.js';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -13,7 +15,7 @@ export async function POST(request: Request) {
     const systemMessage =
       "You are an assistant that simplifies recipes. Select the 5 most important non-staple ingredients, and rewrite the instructions accordingly using only those ingredients and the staples provided. Make sure the instructions do not include any ingredients other than staples and the 5 you chose.";
 
-    const messages = [
+    const messages: ChatCompletionMessageParam[] = [
       { role: 'system', content: systemMessage },
       {
         role: 'user',
@@ -29,7 +31,7 @@ export async function POST(request: Request) {
           `3. \"instructions\": the rewritten instructions using only the chosen ingredients and staples.\n` +
           `No additional text or fields.`,
       },
-    ] as ChatCompletionMessageParam[];
+    ];
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',
