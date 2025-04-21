@@ -32,7 +32,7 @@ type SearchResult = {
 // staple ingredient type with optional quantity
 type Staple = { name: string; quantity: string };
 export default function RecipeToTJs() {
-  const [url, setUrl] = useState("https://www.allrecipes.com/recipe/223042/chicken-parmesan/");
+  const [url, setUrl] = useState();
   const [ingredients, setIngredients] = useState<SearchResult[]>([]);
   const [staples, setStaples] = useState<Staple[]>([]);
   // Instructions may come back as a string or an array of steps
